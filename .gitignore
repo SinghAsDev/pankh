@@ -19,3 +19,10 @@ project/plugins/project/
 #IntelliJ Idea
 *.iml
 .idea/
+build/
+
+#Gradle
+.gradle/
+gradle/
+gradlew
+gradlew.bat
