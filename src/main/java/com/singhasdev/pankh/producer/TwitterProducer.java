@@ -2,8 +2,9 @@ package com.singhasdev.pankh.producer;
 
 import java.util.*;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,10 +30,9 @@ public class TwitterProducer {
   private static final String sendTweetsToKafka = "sendTweetsToKafka";
 
   private static final String BROKER_LIST = "broker.list";
-  private static final String CLIENT_ID = "client.id";
-  private static final String KEY_SERIALIZER = "key.serializer";
-  private static final String VALUE_SERIALIZER = "value.serializer";
   private static final String KAFKA_TOPIC = "kafka.topic";
+  private static final String SERIALIZER = "serializer.class";
+  private static final String REQUIRED_ACKS = "request.required.acks";
 
   /** Information necessary for accessing the Twitter API */
   private String consumerKey;
@@ -47,12 +47,12 @@ public class TwitterProducer {
 
     /** Producer properties **/
     Properties props = new Properties();
-    props.put("bootstrap.servers", context.getString(BROKER_LIST));
-    props.put("client.id", context.getString(CLIENT_ID));
-    props.put("key.serializer", context.getString(KEY_SERIALIZER));
-    props.put("value.serializer", context.getString(VALUE_SERIALIZER));
+    props.put("metadata.broker.list", context.getString(BROKER_LIST));
+    props.put("serializer.class", context.getString(SERIALIZER));
+    props.put("request.required.acks", context.getString(REQUIRED_ACKS));
 
-    final KafkaProducer producer = new KafkaProducer(props);
+    ProducerConfig config = new ProducerConfig(props);
+    final Producer<String, String> producer = new Producer<String, String>(config);
 
     /** Twitter properties **/
     consumerKey = context.getString(CONSUMER_KEY_KEY);
@@ -85,9 +85,9 @@ public class TwitterProducer {
         }
 
         if (shouldSendTweetsToKafka) {
-          producer.send(new ProducerRecord(
-              context.getString(KAFKA_TOPIC),
-              TwitterObjectFactory.getRawJSON(status).getBytes()));
+          KeyedMessage<String, String> data = new KeyedMessage<String, String>(context.getString(KAFKA_TOPIC)
+              , TwitterObjectFactory.getRawJSON(status));
+          producer.send(data);
         }
       }
 
