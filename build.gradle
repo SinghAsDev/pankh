@@ -16,6 +16,13 @@ dependencies {
     runtime 'org.slf4j:slf4j-log4j12:1.7.12'
 }
 
+configurations {
+  all*.exclude group: 'javax.jms', module: 'jms'
+  all*.exclude group: 'com.sun.jdmk', module: 'jmxtools'
+  all*.exclude group: 'com.sun.jmx', module: 'jmxri'
+  published
+}
+
 mainClassName = "com.singhasdev.pankh.producer.TwitterProducer"
 
 run {
