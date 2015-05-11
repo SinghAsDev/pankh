@@ -117,7 +117,7 @@ public class TwitterProducer {
       tp.start(context);
 
     } catch (Exception e) {
-      logger.info(e.getMessage());
+      e.printStackTrace();
     }
   }
 }
