@@ -29,7 +29,7 @@ public class TwitterProducer {
   private static final String printTweetsOnScreen = "printTweetsOnScreen";
   private static final String sendTweetsToKafka = "sendTweetsToKafka";
 
-  private static final String BROKER_LIST = "broker.list";
+  private static final String BROKER_LIST = "metadata.broker.list";
   private static final String KAFKA_TOPIC = "kafka.topic";
   private static final String SERIALIZER = "serializer.class";
   private static final String REQUIRED_ACKS = "request.required.acks";
