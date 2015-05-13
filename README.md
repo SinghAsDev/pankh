@@ -8,7 +8,9 @@ gradle
 ./gradlew jar
 ```
 
-# How to run
+# twitter-kafka
+
+## How to run
 ```
-./gradlew run -Pargs="<PATH_TO_CONF>"
+./gradlew :twitter-kafka:run -Pargs="<PATH_TO_CONF>"
 ```

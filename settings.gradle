@@ -1,2 +1,6 @@
 rootProject.name = 'pankh'
 
+include 'twitter-kafka'
+
+include 'kafka-spark'
+
