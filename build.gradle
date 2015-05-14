@@ -4,6 +4,9 @@ allprojects {
   apply plugin: 'idea'
   repositories {
     mavenCentral()
+    maven {
+      url "https://repository.cloudera.com/artifactory/cloudera-repos/"
+    }
   }
 }
 
@@ -29,6 +32,33 @@ project(':twitter-kafka') {
   apply plugin: 'application'
 
   mainClassName = "com.singhasdev.pankh.producer.TwitterProducer"
+
+  run {
+    if ( project.hasProperty('args') ) {
+      args project.args.split('\\s+')
+    }
+  }
+}
+
+project(':kafka-spark') {
+  dependencies {
+    compile "org.apache.spark:spark-streaming_2.10:1.3.0"
+    compile "org.apache.spark:spark-streaming-kafka_2.10:1.3.1"
+    compile "org.apache.spark:spark-core_2.10:1.3.0"
+    compile "org.apache.kafka:kafka_2.10:0.8.0"
+    compile "com.cloudera:spark-hbase:0.0.2-clabs"
+  }
+
+  configurations {
+    all*.exclude group: 'javax.jms', module: 'jms'
+    all*.exclude group: 'com.sun.jdmk', module: 'jmxtools'
+    all*.exclude group: 'com.sun.jmx', module: 'jmxri'
+    published
+  }
+
+  apply plugin: 'application'
+
+  mainClassName = "com.singhasdev.pankh.analysis.SentimentAnalysis"
 
   run {
     if ( project.hasProperty('args') ) {
