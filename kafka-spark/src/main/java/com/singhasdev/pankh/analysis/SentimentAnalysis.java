@@ -35,6 +35,7 @@ public class SentimentAnalysis {
 
     // Create context
     SparkConf sparkConf = new SparkConf().setAppName("SentimentAnalysis");
+    sparkConf.setMaster("local[2]");
     JavaStreamingContext javaStreamingContext = new JavaStreamingContext(sparkConf,
         Durations.seconds(2));
 
