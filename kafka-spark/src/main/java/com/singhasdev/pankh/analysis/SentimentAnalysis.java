@@ -61,13 +61,11 @@ public class SentimentAnalysis {
         return tuple2._2();
       }
     });
-    JavaDStream<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
-      @Override
-      public Iterable<String> call(String x) {
-        logger.info("TWEET: " + x);
-        return Arrays.asList();
-      }
-    });
+    lines.print();
+
+    // Start the computation
+    javaStreamingContext.start();
+    javaStreamingContext.awaitTermination();
 
     logger.info("Done with sentiment analysis");
   }
