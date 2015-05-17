@@ -1,11 +1,14 @@
 package com.singhasdev.pankh.analysis;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kafka.serializer.StringDecoder;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaPairInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
@@ -13,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,14 +58,18 @@ public class SentimentAnalysis {
         topicsSet
     );
 
-    // Get the lines, split them into words, count the words and print
-    JavaDStream<String> lines = messages.map(new Function<Tuple2<String, String>, String>() {
+    // Get the json, split them into words, count the words and print
+    JavaDStream<String> json = messages.map(new Function<Tuple2<String, String>, String>() {
       @Override
       public String call(Tuple2<String, String> tuple2) {
         return tuple2._2();
       }
     });
-    lines.print();
+    //json.print();
+
+    JavaPairDStream<Long, String> tweets = json.mapToPair(new TwitterRawJsonParser());
+
+    tweets.print();
 
     // Start the computation
     javaStreamingContext.start();
