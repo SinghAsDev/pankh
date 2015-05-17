@@ -68,8 +68,17 @@ public class SentimentAnalysis {
     //json.print();
 
     JavaPairDStream<Long, String> tweets = json.mapToPair(new TwitterRawJsonParser());
+    //tweets.print();
 
-    tweets.print();
+    JavaPairDStream<Long, String> filteredTweets = tweets.filter(new Function<Tuple2<Long, String>, Boolean>() {
+      @Override
+      public Boolean call(Tuple2<Long, String> tweet) throws Exception {
+        return tweet != null;
+      }
+    });
+    filteredTweets.print();
+
+
 
     // Start the computation
     javaStreamingContext.start();

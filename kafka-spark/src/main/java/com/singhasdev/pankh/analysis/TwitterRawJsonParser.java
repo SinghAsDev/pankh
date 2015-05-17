@@ -31,6 +31,7 @@ public class TwitterRawJsonParser
         {
           id = root.get("id").longValue();
           text = root.get("text").textValue();
+          text = text.replaceAll("[^a-zA-Z\\s]", "").trim().toLowerCase();
           return new Tuple2<Long, String>(id, text);
         }
         return null;
