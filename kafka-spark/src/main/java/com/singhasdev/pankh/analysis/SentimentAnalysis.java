@@ -111,6 +111,8 @@ public class SentimentAnalysis {
     JavaDStream<Tuple5<Long, String, Float, Float, String>> result =
         scoredTweets.map(new ScoreTweetsFunction());
 
+    result.print();
+
     // Start the computation
     javaStreamingContext.start();
     javaStreamingContext.awaitTermination();
