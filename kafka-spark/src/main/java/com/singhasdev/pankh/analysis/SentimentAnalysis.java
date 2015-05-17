@@ -15,6 +15,8 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
+import scala.Tuple4;
+import scala.Tuple5;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -76,9 +78,38 @@ public class SentimentAnalysis {
         return tweet != null;
       }
     });
-    filteredTweets.print();
+    //filteredTweets.print();
 
+    JavaDStream<Tuple2<Long, String>> stemmedTweets = filteredTweets.map(new StemmingFunction());
 
+    JavaPairDStream<Tuple2<Long, String>, Float> positiveTweets =
+        stemmedTweets.mapToPair(new PositiveScoreFunction());
+
+    JavaPairDStream<Tuple2<Long, String>, Float> negativeTweets =
+        stemmedTweets.mapToPair(new NegativeScoreFunction());
+
+    JavaPairDStream<Tuple2<Long, String>, Tuple2<Float, Float>> joined =
+        positiveTweets.join(negativeTweets);
+
+    JavaDStream<Tuple4<Long, String, Float, Float>> scoredTweets =
+        joined.map(new Function<Tuple2<Tuple2<Long, String>,
+            Tuple2<Float, Float>>,
+            Tuple4<Long, String, Float, Float>>() {
+          private static final long serialVersionUID = 42l;
+          @Override
+          public Tuple4<Long, String, Float, Float> call(
+              Tuple2<Tuple2<Long, String>, Tuple2<Float, Float>> tweet)
+          {
+            return new Tuple4<Long, String, Float, Float>(
+                tweet._1()._1(),
+                tweet._1()._2(),
+                tweet._2()._1(),
+                tweet._2()._2());
+          }
+        });
+
+    JavaDStream<Tuple5<Long, String, Float, Float, String>> result =
+        scoredTweets.map(new ScoreTweetsFunction());
 
     // Start the computation
     javaStreamingContext.start();
