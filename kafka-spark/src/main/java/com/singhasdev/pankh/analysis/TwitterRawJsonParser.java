@@ -24,8 +24,8 @@ public class TwitterRawJsonParser
       JsonNode root = mapper.readValue(tweet, JsonNode.class);
       long id;
       String text;
-      if (root.get("lang") != null &&
-          "en".equals(root.get("lang").textValue()))
+      final JsonNode lang = root.get("lang");
+      if (lang != null && "en".equals(lang.textValue()))
       {
         if (root.get("id") != null && root.get("text") != null)
         {

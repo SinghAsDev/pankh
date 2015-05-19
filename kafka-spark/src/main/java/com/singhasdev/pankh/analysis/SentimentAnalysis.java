@@ -1,10 +1,13 @@
 package com.singhasdev.pankh.analysis;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cloudera.spark.hbase.JavaHBaseContext;
 import kafka.serializer.StringDecoder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -18,7 +21,6 @@ import scala.Tuple2;
 import scala.Tuple4;
 import scala.Tuple5;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,6 +50,8 @@ public class SentimentAnalysis {
     HashSet<String> topicsSet = new HashSet<String>(Arrays.asList(topics.split(",")));
     HashMap<String, String> kafkaParams = new HashMap<String, String>();
     kafkaParams.put("metadata.broker.list", brokers);
+    //kafkaParams.put("auto.offset.reset", "smallest");
+
 
     // Create direct kafka stream with brokers and topics
     JavaPairInputDStream<String, String> messages = KafkaUtils.createDirectStream(
@@ -113,10 +117,36 @@ public class SentimentAnalysis {
 
     result.print();
 
+    Configuration conf = HBaseConfiguration.create();
+    conf.addResource(new Path("/etc/hbase/conf/core-site.xml"));
+    conf.addResource(new Path("/etc/hbase/conf/hbase-site.xml"));
+
+    JavaHBaseContext hbaseContext = new JavaHBaseContext(javaStreamingContext.sparkContext(), conf);
+
+    hbaseContext.streamBulkPut(result, "tweets_1", new PutFunction(), true);
+
     // Start the computation
     javaStreamingContext.start();
     javaStreamingContext.awaitTermination();
 
     logger.info("Done with sentiment analysis");
+  }
+
+  private static class PutFunction implements Function<Tuple5<Long, String, Float, Float, String>, Put> {
+    private static final byte[] family = "tweet".getBytes();
+    private static final byte[] tweetText = "tweet_text".getBytes();
+    private static final byte[] tweetPositiveScore = "positive_score".getBytes();
+    private static final byte[] tweetNegativeScore = "negative_score".getBytes();
+    private static final byte[] tweetSentiment = "sentiment".getBytes();
+
+    @Override
+    public Put call(Tuple5<Long, String, Float, Float, String> tuple5) throws Exception {
+      Put put = new Put(Bytes.toBytes(tuple5._1()));
+      put.addColumn(family, tweetText, Bytes.toBytes(tuple5._2()));
+      put.addColumn(family, tweetPositiveScore, Bytes.toBytes(tuple5._3()));
+      put.addColumn(family, tweetNegativeScore, Bytes.toBytes(tuple5._4()));
+      put.addColumn(family, tweetSentiment, Bytes.toBytes(tuple5._5()));
+      return put;
+    }
   }
 }
