@@ -39,6 +39,9 @@ public class SentimentAnalysis {
   private static final String HBASE_SITE_PATH = "hbase.site.path";
   private static final String HBASE_TABLE = "hbase.table";
 
+  private static final String SHOULD_PERSIST_IN_HBASE = "persistToHbase";
+  private static final String SHOULD_PRINT_SENTIMENT = "printSentimentAnalysisResult";
+
   public static void main (String[] args) {
     String confFile;
     if (args.length != 1) {
@@ -132,16 +135,19 @@ public class SentimentAnalysis {
 
     JavaDStream<Tuple5<Long, String, Float, Float, String>> result =
         scoredTweets.map(new ScoreTweetsFunction());
+    if (Boolean.parseBoolean(context.getString(SHOULD_PRINT_SENTIMENT))) {
+      result.print();
+    }
 
-    result.print();
+    if (Boolean.parseBoolean(context.getString(SHOULD_PERSIST_IN_HBASE))) {
+      Configuration conf = HBaseConfiguration.create();
+      conf.addResource(new Path(context.getString(HBASE_CORE_SITE_PATH)));
+      conf.addResource(new Path(context.getString(HBASE_SITE_PATH)));
 
-    Configuration conf = HBaseConfiguration.create();
-    conf.addResource(new Path(context.getString(HBASE_CORE_SITE_PATH)));
-    conf.addResource(new Path(context.getString(HBASE_SITE_PATH)));
+      JavaHBaseContext hbaseContext = new JavaHBaseContext(javaStreamingContext.sparkContext(), conf);
 
-    JavaHBaseContext hbaseContext = new JavaHBaseContext(javaStreamingContext.sparkContext(), conf);
-
-    hbaseContext.streamBulkPut(result, context.getString(HBASE_TABLE), new PutFunction(), true);
+      hbaseContext.streamBulkPut(result, context.getString(HBASE_TABLE), new PutFunction(), true);
+    }
 
     // Start the computation
     javaStreamingContext.start();
