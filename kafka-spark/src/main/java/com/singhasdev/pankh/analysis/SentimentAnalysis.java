@@ -142,10 +142,10 @@ public class SentimentAnalysis {
     @Override
     public Put call(Tuple5<Long, String, Float, Float, String> tuple5) throws Exception {
       Put put = new Put(Bytes.toBytes(tuple5._1()));
-      put.addColumn(family, tweetText, Bytes.toBytes(tuple5._2()));
-      put.addColumn(family, tweetPositiveScore, Bytes.toBytes(tuple5._3()));
-      put.addColumn(family, tweetNegativeScore, Bytes.toBytes(tuple5._4()));
-      put.addColumn(family, tweetSentiment, Bytes.toBytes(tuple5._5()));
+      put.add(family, tweetText, Bytes.toBytes(tuple5._2()));
+      put.add(family, tweetPositiveScore, Bytes.toBytes(tuple5._3()));
+      put.add(family, tweetNegativeScore, Bytes.toBytes(tuple5._4()));
+      put.add(family, tweetSentiment, Bytes.toBytes(tuple5._5()));
       return put;
     }
   }
