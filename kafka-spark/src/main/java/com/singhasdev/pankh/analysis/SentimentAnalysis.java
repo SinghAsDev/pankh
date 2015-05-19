@@ -28,28 +28,46 @@ import java.util.HashSet;
 public class SentimentAnalysis {
   private static final Logger logger = LoggerFactory.getLogger(SentimentAnalysis.class);
 
+  private static final String KAFKA_BROKERS = "kafka.brokers";
+  private static final String KAFKA_TOPICS = "kafka.topics";
+
+  private static final String SPARK_APP_NAME = "spark.app.name";
+  private static final String SPARK_MASTER = "spark.master";
+  private static final String SPARK_BATCH_DURATION = "spark.batch.duration";
+
+  private static final String HBASE_CORE_SITE_PATH = "hbase.core.site.path";
+  private static final String HBASE_SITE_PATH = "hbase.site.path";
+  private static final String HBASE_TABLE = "hbase.table";
+
   public static void main (String[] args) {
-    if (args.length < 2) {
-      logger.error("Usage: SentimentAnalysis <brokers> <topics>\n" +
-          "  <brokers> is a list of one or more Kafka brokers\n" +
-          "  <topics> is a list of one or more kafka topics to consume from\n\n");
-      return;
+    String confFile;
+    if (args.length != 1) {
+      logger.warn("A config file is expected as argument. Using default file, conf/analyzer.conf");
+      confFile = "conf/analyzer.conf";
+    } else {
+      confFile = args[0];
     }
 
     logger.info("Starting sentiment analysis");
 
-    String brokers = args[0];
-    String topics = args[1];
+    Context context;
+    try {
+      context = new Context(confFile);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return;
+    }
 
     // Create context
-    SparkConf sparkConf = new SparkConf().setAppName("SentimentAnalysis");
-    sparkConf.setMaster("local[2]");
+    SparkConf sparkConf = new SparkConf().setAppName(context.getString(SPARK_APP_NAME));
+    sparkConf.setMaster(context.getString(SPARK_MASTER));
     JavaStreamingContext javaStreamingContext = new JavaStreamingContext(sparkConf,
-        Durations.seconds(2));
+        Durations.seconds(Integer.parseInt(context.getString(SPARK_BATCH_DURATION))));
 
-    HashSet<String> topicsSet = new HashSet<String>(Arrays.asList(topics.split(",")));
+    HashSet<String> topicsSet = new HashSet<String>(Arrays.asList(context.getString(KAFKA_TOPICS)
+        .split(",")));
     HashMap<String, String> kafkaParams = new HashMap<String, String>();
-    kafkaParams.put("metadata.broker.list", brokers);
+    kafkaParams.put("metadata.broker.list", context.getString(KAFKA_BROKERS));
     //kafkaParams.put("auto.offset.reset", "smallest");
 
 
@@ -118,12 +136,12 @@ public class SentimentAnalysis {
     result.print();
 
     Configuration conf = HBaseConfiguration.create();
-    conf.addResource(new Path("/etc/hbase/conf/core-site.xml"));
-    conf.addResource(new Path("/etc/hbase/conf/hbase-site.xml"));
+    conf.addResource(new Path(context.getString(HBASE_CORE_SITE_PATH)));
+    conf.addResource(new Path(context.getString(HBASE_SITE_PATH)));
 
     JavaHBaseContext hbaseContext = new JavaHBaseContext(javaStreamingContext.sparkContext(), conf);
 
-    hbaseContext.streamBulkPut(result, "tweets_1", new PutFunction(), true);
+    hbaseContext.streamBulkPut(result, context.getString(HBASE_TABLE), new PutFunction(), true);
 
     // Start the computation
     javaStreamingContext.start();

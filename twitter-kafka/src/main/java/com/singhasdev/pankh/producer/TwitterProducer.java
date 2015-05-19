@@ -111,13 +111,16 @@ public class TwitterProducer {
   }
 
   public static void main(String[] args) {
+    String confFile;
     if (args.length != 1) {
-      logger.error("A config file is expected as argument.");
-      return;
+      logger.warn("A config file is expected as argument. Using default file, conf/producer.conf");
+      confFile = "conf/producer.conf";
+    } else {
+      confFile = args[0];
     }
 
     try {
-      Context context = new Context(args[0]);
+      Context context = new Context(confFile);
       TwitterProducer tp = new TwitterProducer();
       tp.start(context);
 
