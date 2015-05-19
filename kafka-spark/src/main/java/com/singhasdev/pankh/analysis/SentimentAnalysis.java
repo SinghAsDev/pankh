@@ -18,8 +18,9 @@ import org.apache.spark.streaming.kafka.KafkaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
-import scala.Tuple4;
+import scala.Tuple3;
 import scala.Tuple5;
+import scala.Tuple6;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -94,46 +95,50 @@ public class SentimentAnalysis {
     });
     //json.print();
 
-    JavaPairDStream<Long, String> tweets = json.mapToPair(new TwitterRawJsonParser());
+    JavaDStream<Tuple3<Long, String, String>> tweets = json.map(new TwitterRawJsonParser());
     //tweets.print();
 
-    JavaPairDStream<Long, String> filteredTweets = tweets.filter(new Function<Tuple2<Long, String>, Boolean>() {
-      @Override
-      public Boolean call(Tuple2<Long, String> tweet) throws Exception {
-        return tweet != null;
-      }
-    });
-    //filteredTweets.print();
-
-    JavaDStream<Tuple2<Long, String>> stemmedTweets = filteredTweets.map(new StemmingFunction());
-
-    JavaPairDStream<Tuple2<Long, String>, Float> positiveTweets =
-        stemmedTweets.mapToPair(new PositiveScoreFunction());
-
-    JavaPairDStream<Tuple2<Long, String>, Float> negativeTweets =
-        stemmedTweets.mapToPair(new NegativeScoreFunction());
-
-    JavaPairDStream<Tuple2<Long, String>, Tuple2<Float, Float>> joined =
-        positiveTweets.join(negativeTweets);
-
-    JavaDStream<Tuple4<Long, String, Float, Float>> scoredTweets =
-        joined.map(new Function<Tuple2<Tuple2<Long, String>,
-            Tuple2<Float, Float>>,
-            Tuple4<Long, String, Float, Float>>() {
-          private static final long serialVersionUID = 42l;
+    JavaDStream<Tuple3<Long, String, String>> filteredTweets = tweets.filter(
+        new Function<Tuple3<Long, String, String>, Boolean>() {
           @Override
-          public Tuple4<Long, String, Float, Float> call(
-              Tuple2<Tuple2<Long, String>, Tuple2<Float, Float>> tweet)
-          {
-            return new Tuple4<Long, String, Float, Float>(
-                tweet._1()._1(),
-                tweet._1()._2(),
-                tweet._2()._1(),
-                tweet._2()._2());
+          public Boolean call(Tuple3<Long, String, String> tweet) throws Exception {
+            return tweet != null;
           }
         });
+    //filteredTweets.print();
 
-    JavaDStream<Tuple5<Long, String, Float, Float, String>> result =
+    JavaDStream<Tuple3<Long, String, String>> stemmedTweets = filteredTweets.map(new
+        StemmingFunction());
+
+    JavaPairDStream<Tuple3<Long, String, String>, Float> positiveTweets =
+        stemmedTweets.mapToPair(new PositiveScoreFunction());
+
+    JavaPairDStream<Tuple3<Long, String, String>, Float> negativeTweets =
+        stemmedTweets.mapToPair(new NegativeScoreFunction());
+
+    JavaPairDStream<Tuple3<Long, String, String>, Tuple2<Float, Float>> joined =
+        positiveTweets.join(negativeTweets);
+
+    JavaDStream<Tuple5<Long, String, String, Float, Float>> scoredTweets =
+        joined.map(
+            new Function<Tuple2<Tuple3<Long, String, String>,
+            Tuple2<Float, Float>>,
+            Tuple5<Long, String, String, Float, Float>>() {
+              private static final long serialVersionUID = 42l;
+
+              @Override
+              public Tuple5<Long, String, String, Float, Float> call(
+                  Tuple2<Tuple3<Long, String, String>, Tuple2<Float, Float>> tweet) {
+                return new Tuple5<Long, String, String, Float, Float>(
+                    tweet._1()._1(),
+                    tweet._1()._2(),
+                    tweet._1()._3(),
+                    tweet._2()._1(),
+                    tweet._2()._2());
+              }
+            });
+
+    JavaDStream<Tuple6<Long, String, String, Float, Float, String>> result =
         scoredTweets.map(new ScoreTweetsFunction());
     if (Boolean.parseBoolean(context.getString(SHOULD_PRINT_SENTIMENT))) {
       result.print();
@@ -156,20 +161,23 @@ public class SentimentAnalysis {
     logger.info("Done with sentiment analysis");
   }
 
-  private static class PutFunction implements Function<Tuple5<Long, String, Float, Float, String>, Put> {
+  private static class PutFunction implements Function<Tuple6<Long, String, String, Float, Float,
+      String>, Put> {
     private static final byte[] family = "tweet".getBytes();
+    private static final byte[] tweetKeywords = "tweet_keywords".getBytes();
     private static final byte[] tweetText = "tweet_text".getBytes();
     private static final byte[] tweetPositiveScore = "positive_score".getBytes();
     private static final byte[] tweetNegativeScore = "negative_score".getBytes();
     private static final byte[] tweetSentiment = "sentiment".getBytes();
 
     @Override
-    public Put call(Tuple5<Long, String, Float, Float, String> tuple5) throws Exception {
+    public Put call(Tuple6<Long, String, String, Float, Float, String> tuple5) throws Exception {
       Put put = new Put(Bytes.toBytes(tuple5._1()));
       put.add(family, tweetText, Bytes.toBytes(tuple5._2()));
-      put.add(family, tweetPositiveScore, Bytes.toBytes(tuple5._3()));
-      put.add(family, tweetNegativeScore, Bytes.toBytes(tuple5._4()));
-      put.add(family, tweetSentiment, Bytes.toBytes(tuple5._5()));
+      put.add(family, tweetKeywords, Bytes.toBytes(tuple5._3()));
+      put.add(family, tweetPositiveScore, Bytes.toBytes(tuple5._4()));
+      put.add(family, tweetNegativeScore, Bytes.toBytes(tuple5._5()));
+      put.add(family, tweetSentiment, Bytes.toBytes(tuple5._6()));
       return put;
     }
   }

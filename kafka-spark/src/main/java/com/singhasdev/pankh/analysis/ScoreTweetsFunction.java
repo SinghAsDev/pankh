@@ -1,30 +1,30 @@
 package com.singhasdev.pankh.analysis;
 
 import org.apache.spark.api.java.function.*;
-import org.apache.spark.streaming.api.java.*;
-import scala.Tuple4;
 import scala.Tuple5;
+import scala.Tuple6;
 
 public class ScoreTweetsFunction
-    implements Function<Tuple4<Long, String, Float, Float>,
-    Tuple5<Long, String, Float, Float, String>>
+    implements Function<Tuple5<Long, String, String, Float, Float>,
+    Tuple6<Long, String, String, Float, Float, String>>
 {
   private static final long serialVersionUID = 42l;
 
   @Override
-  public Tuple5<Long, String, Float, Float, String> call(
-      Tuple4<Long, String, Float, Float> tweet)
+  public Tuple6<Long, String, String, Float, Float, String> call(
+      Tuple5<Long, String, String, Float, Float> tweet)
   {
     String score;
-    if (tweet._3() >= tweet._4())
+    if (tweet._4() >= tweet._5())
       score = "positive";
     else
       score = "negative";
-    return new Tuple5<Long, String, Float, Float, String>(
+    return new Tuple6<Long, String, String, Float, Float, String>(
         tweet._1(),
         tweet._2(),
         tweet._3(),
         tweet._4(),
+        tweet._5(),
         score);
   }
 }

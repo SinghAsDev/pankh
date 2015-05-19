@@ -5,19 +5,19 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 
 import org.apache.spark.api.java.function.*;
-import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import scala.Tuple3;
 
 public class TwitterRawJsonParser
-    implements PairFunction<String, Long, String>
+    implements Function<String, Tuple3<Long, String, String>>
 {
   private static final long serialVersionUID = 42l;
   private final ObjectMapper mapper = new ObjectMapper();
 
   @Override
-  public Tuple2<Long, String> call(String tweet)
+  public Tuple3<Long, String, String> call(String tweet)
   {
     try
     {
@@ -31,8 +31,8 @@ public class TwitterRawJsonParser
         {
           id = root.get("id").longValue();
           text = root.get("text").textValue();
-          text = text.replaceAll("[^a-zA-Z\\s]", "").trim().toLowerCase();
-          return new Tuple2<Long, String>(id, text);
+          String modifiedText = text.replaceAll("[^a-zA-Z\\s]", "").trim().toLowerCase();
+          return new Tuple3<Long, String, String>(id, text, modifiedText);
         }
         return null;
       }
